@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html class="dark">
+  <head>
+    <title>Game Of Life with rails</title>
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    <%= action_cable_meta_tag %>
+    <%= javascript_pack_tag 'game-of-life-bundle' %>
+    <%= stylesheet_pack_tag 'game-of-life-bundle' %>
+    <%= stylesheet_link_tag "tailwind", "inter-font", "data-turbo-track": "reload" %>
+
+  </head>
+
+  <body class="h-screen w-full">
+    <nav class ="pt-4 w-full px-10">
+      <% if user_signed_in? %>
+      <div class="flex gap-4 justify-between items-center">
+        <div class="justify-around flex w-full text-xl font-bold"> Welcome 👋 to this Game of Live</div>
+          <div class="border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0">
+            <%= button_to "Sign out", destroy_user_session_path, method: :delete %>
+          </div>
+        <% end %>
+      </div>
+    </nav>
+    <main class="container mt-20 mx-auto">
+    <%= yield %>
+  </body>
+</html>

@@ -1,0 +1,29 @@
+
+<%= form_for(resource, as: resource_name, url: session_path(resource_name), html: { class: "space-y-6 flex flex-col h-screen width full mx-auto" }) do |f| %>
+  <h2 class="text-2xl font-bold mb-4">Log in</h2>
+  <div class="">
+    <%= f.label :email, class: "block text-sm font-medium text-primary" %>
+    <%= f.email_field :email, autofocus: true, autocomplete: "email", class: "mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-background/70" %>
+  </div>
+
+  <div class="field">
+    <%= f.label :password, class: "block text-sm font-medium text-primary" %>
+    <%= f.password_field :password, autocomplete: "current-password", class: "mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-background/70" %>
+  </div>
+
+  <% if devise_mapping.rememberable? %>
+    <div class="field flex items-center">
+      <%= f.check_box :remember_me, class: "h-4 w-4 text-indigo-600 border-gray-300 rounded" %>
+      <%= f.label :remember_me, class: "ml-2 block text-sm text-primary" %>
+    </div>
+  <% end %>
+
+  <div class="actions">
+    <%= f.submit "Log in", class: "w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" %>
+  </div>
+  <div class="flex gap-4">
+
+  <%= render "devise/shared/links" %>
+  </div>
+<% end %>
+
