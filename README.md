@@ -1,5 +1,10 @@
 # A Game of Life in Ruby on Rails
 
+
+https://github.com/user-attachments/assets/900e4d09-5706-41cd-b064-9720d583f451
+
+
+
 This is an implementation of the Game of Life in Ruby on Rails. The simulation is displayed in a grid of cells, each of which is either alive or dead.
 
 The simulation is calculated server side, using a well known algorith of finding the next state of each cell based on the number of live neighbors.
