@@ -2,14 +2,11 @@ import React, { useState, useCallback, useRef, useEffect } from "react";
 import { createConsumer } from "@rails/actioncable";
 
 import { Button } from "./ui/Button";
-import { Label } from "./ui/Label";
-import { Input } from "./ui/Input";
 import Sidebar from "./Sidebar";
 import { Separator } from "./ui/Separator";
 
 import { PlayIcon } from "../icons/Play";
 import { PauseIcon } from "../icons/Pause";
-import { CircleChevronRight } from "../icons/Step";
 import { RefreshIcon } from "../icons/Refresh";
 import { DeleteIcon } from "../icons/Trash";
 
@@ -224,6 +221,32 @@ const GameOfLife = () => {
     drawGrid(grid);
   }, [grid]);
 
+  // Add beforeunload handler
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (hasActiveJob.current) {
+        // Cancel the running simulation
+        cancelJob();
+
+        // Show confirmation dialog
+        e.preventDefault();
+        e.returnValue =
+          "You have a running simulation. Are you sure you want to leave?";
+        return e.returnValue;
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      if (hasActiveJob.current) {
+        cancelJob();
+      }
+    };
+  }, [cancelJob]);
+
   return (
     <div className="w-full flex">
       <div className="flex flex-col">
@@ -231,7 +254,7 @@ const GameOfLife = () => {
           ref={canvasRef}
           width={cols * cellSize}
           height={rows * cellSize}
-          className="border border-gray-800 rounded-xl cursor-pointer"
+          className="border border-border rounded-xl cursor-pointer transition-colors"
           onClick={handleCanvasClick}
         />
       </div>
@@ -243,7 +266,7 @@ const GameOfLife = () => {
           <div className="flex py-2 w-1/2 gap-2">
             <Button
               size="icon"
-              variant="default"
+              variant="ghost"
               onClick={() => setRunning(!running)}
               disabled={isGridEmpty(grid)}
               title={running ? (isPaused ? "Resume" : "Pause") : "Play"}
@@ -253,7 +276,7 @@ const GameOfLife = () => {
 
             <Button
               size="icon"
-              variant="default"
+              variant="ghost"
               onClick={resetGrid}
               title="Reset Grid"
             >
@@ -262,7 +285,7 @@ const GameOfLife = () => {
 
             <Button
               size="icon"
-              variant="default"
+              variant="ghost"
               onClick={clearGrid}
               title="Clear Grid"
             >
