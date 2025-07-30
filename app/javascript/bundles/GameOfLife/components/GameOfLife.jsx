@@ -1,32 +1,27 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { createConsumer } from "@rails/actioncable";
+import { toast } from "sonner";
 
-import { Button } from "./ui/Button";
 import Sidebar from "./Sidebar";
 import { Separator } from "./ui/Separator";
+import GameOfLifeControls from "./GameOfLifeControls";
+import {
+  generateGrid,
+  isGridEmpty,
+  drawGrid,
+  toggleCell,
+  generateEmptyGrid,
+  getCellFromClick,
+  DEFAULT_ROWS,
+  DEFAULT_COLS,
+  DEFAULT_CELL_SIZE,
+} from "lib/utils";
+import { apiStartSimulation, apiCancelJob } from "lib/gameOfLifeApi";
+import { createGameOfLifeSubscription } from "lib/gameOfLifeSubscription";
 
-import { PlayIcon } from "../icons/Play";
-import { PauseIcon } from "../icons/Pause";
-import { RefreshIcon } from "../icons/Refresh";
-import { DeleteIcon } from "../icons/Trash";
-
-const DENSITY = 0.2;
-
-// Game of Life Component
 const GameOfLife = () => {
-  const rows = 45; // Set grid size
-  const cols = 60;
-  const cellSize = 15;
-
-  // Generate a random grid based on density
-  const generateGrid = (rows, cols) => {
-    return Array.from({ length: rows }, () =>
-      Array.from({ length: cols }, () => ({
-        alive: Math.random() < DENSITY,
-        age: 0,
-      }))
-    );
-  };
+  const rows = DEFAULT_ROWS; // Set grid size
+  const cols = DEFAULT_COLS;
+  const cellSize = DEFAULT_CELL_SIZE;
 
   // State Variables
   const [grid, setGrid] = useState(() => generateGrid(rows, cols));
@@ -37,24 +32,10 @@ const GameOfLife = () => {
   const hasActiveJob = useRef(false);
   const [isPaused, setIsPaused] = useState(false);
 
-  // Function to check if grid is empty
-  const isGridEmpty = useCallback((grid) => {
-    return grid.every((row) => row.every((cell) => !cell.alive));
-  }, []);
-
   // Cancel the running job
   const cancelJob = useCallback(() => {
     if (jobId) {
-      fetch(`/game_of_life/cancel`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRF-Token": document
-            .querySelector('meta[name="csrf-token"]')
-            .getAttribute("content"),
-        },
-        body: JSON.stringify({ job_id: jobId }),
-      }).then(() => {
+      apiCancelJob(jobId).then(() => {
         setJobId(null);
         hasActiveJob.current = false;
       });
@@ -63,32 +44,15 @@ const GameOfLife = () => {
 
   // Function to start the simulation with a given grid
   const startSimulation = useCallback((initialGrid) => {
-    console.log("Starting simulation with grid...");
-    const csrfToken = document
-      .querySelector('meta[name="csrf-token"]')
-      .getAttribute("content");
-
-    fetch("/game_of_life", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRF-Token": csrfToken,
-      },
-      body: JSON.stringify({ game: { grid: initialGrid } }),
-    })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-      })
+    toast("Starting simulation");
+    apiStartSimulation(initialGrid)
       .then((data) => {
-        console.log("Server response:", data);
         setJobId(data.job_id);
         hasActiveJob.current = true;
       })
       .catch((error) => {
         console.error("Error starting simulation:", error);
+        toast.error("Failed to start simulation. Please try again.");
         hasActiveJob.current = false;
         setRunning(false);
       });
@@ -96,18 +60,15 @@ const GameOfLife = () => {
 
   // Function to clear the grid
   const clearGrid = useCallback(() => {
-    const emptyGrid = Array.from({ length: rows }, () =>
-      Array.from({ length: cols }, () => ({
-        alive: false,
-        age: 0,
-      }))
-    );
+    const emptyGrid = generateEmptyGrid(rows, cols);
     setGrid(emptyGrid);
     if (hasActiveJob.current) {
       cancelJob();
       setRunning(false);
       hasActiveJob.current = false;
     }
+
+    toast("Grid cleared");
   }, [rows, cols, cancelJob]);
 
   // Modified reset function to handle simulation restart
@@ -122,22 +83,15 @@ const GameOfLife = () => {
         setRunning(true);
       }, 100);
     }
+
+    toast("Grid reset");
   }, [rows, cols, cancelJob]);
 
   // Handle canvas click to update grid and pause simulation
   const handleCanvasClick = useCallback(
     (e) => {
-      const rect = e.target.getBoundingClientRect();
-      const x = Math.floor((e.clientY - rect.top) / cellSize);
-      const y = Math.floor((e.clientX - rect.left) / cellSize);
-
-      const newGrid = grid.map((row, rowIndex) =>
-        row.map((col, colIndex) => ({
-          ...col,
-          alive: rowIndex === x && colIndex === y ? !col.alive : col.alive,
-        }))
-      );
-
+      const { x, y } = getCellFromClick(e, cellSize);
+      const newGrid = toggleCell(grid, x, y);
       setGrid(newGrid);
 
       // If simulation is running, pause it
@@ -153,43 +107,42 @@ const GameOfLife = () => {
 
   // Set up WebSocket connection
   useEffect(() => {
-    console.log("Setting up WebSocket connection...");
-
-    const cable = createConsumer();
-
-    const subscription = cable.subscriptions.create(
-      { channel: "GameOfLifeChannel" },
-      {
-        connected() {
-          console.log("Successfully connected to GameOfLifeChannel");
-        },
-        disconnected() {
-          console.log("Disconnected from GameOfLifeChannel");
-        },
-        received(data) {
-          console.log("Raw message received:", data);
-          if (data && data.type === "grid_update" && data.grid) {
-            console.log("Updating grid with received data");
-            setGrid(data.grid);
-            drawGrid(data.grid);
-          }
-        },
-      }
-    );
-
+    const subscription = createGameOfLifeSubscription({
+      onGridUpdate: (grid) => {
+        setGrid(grid);
+        drawGrid(grid, canvasRef, cols, rows, cellSize);
+      },
+      onJobStatus: (data) => {
+        if (data.status === "running" && data.job_id) {
+          setJobId(data.job_id);
+          setRunning(true);
+          hasActiveJob.current = true;
+        } else {
+          setJobId(null);
+          setRunning(false);
+          hasActiveJob.current = false;
+        }
+      },
+      onConnect: () => {
+        console.log("Successfully connected to GameOfLifeChannel");
+      },
+      onDisconnect: () => {
+        console.log("Disconnected from GameOfLifeChannel");
+      },
+    });
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [canvasRef, cols, rows, cellSize]);
 
   // Modified effect to handle play/pause/resume
   useEffect(() => {
     if (running && !hasActiveJob.current) {
-      console.log("Starting new game simulation...");
+      toast("Starting new game simulation");
       startSimulation(grid);
       setIsPaused(false);
     } else if (!running && hasActiveJob.current) {
-      console.log("Stopping game simulation...");
+      toast("Stopping game simulation");
       cancelJob();
       hasActiveJob.current = false;
       setIsPaused(true);
@@ -197,29 +150,17 @@ const GameOfLife = () => {
   }, [running, grid, startSimulation, cancelJob]);
 
   // Render the grid on the canvas
-  const drawGrid = useCallback(
+  const drawGridCallback = useCallback(
     (grid) => {
-      if (!canvasRef.current) return;
-
-      const ctx = canvasRef.current.getContext("2d");
-      ctx.clearRect(0, 0, cols * cellSize, rows * cellSize);
-
-      grid.forEach((row, i) =>
-        row.forEach((cell, j) => {
-          ctx.fillStyle = cell.alive
-            ? `hsl(${(cell.age * 10) % 360}, 100%, 60%)`
-            : `#111827`;
-          ctx.fillRect(j * cellSize, i * cellSize, cellSize, cellSize);
-        })
-      );
+      drawGrid(grid, canvasRef, cols, rows, cellSize);
     },
-    [cols, rows]
+    [canvasRef, cols, rows, cellSize]
   );
 
   // Update the canvas on grid change
   useEffect(() => {
-    drawGrid(grid);
-  }, [grid]);
+    drawGridCallback(grid);
+  }, [grid, drawGridCallback]);
 
   // Add beforeunload handler
   useEffect(() => {
@@ -248,51 +189,28 @@ const GameOfLife = () => {
   }, [cancelJob]);
 
   return (
-    <div className="w-full flex">
+    <div className="w-full flex gap-4">
       <div className="flex flex-col">
         <canvas
           ref={canvasRef}
           width={cols * cellSize}
           height={rows * cellSize}
-          className="border border-border rounded-xl cursor-pointer transition-colors"
+          className="border border-border rounded-xl cursor-pointer transition-colors shadow-xs shadow-gray-500"
           onClick={handleCanvasClick}
         />
       </div>
-      <div className="flex flex-col ml-4 mx-auto rounded-xl border-border bg-background/80">
+      <div className="flex h-full flex-col ml-4 mx-auto rounded-xl border-border bg-background items-stretch">
         <Sidebar />
         <Separator className="bg-gray-600" />
-        <div className="p-4 rounded-b-xl">
-          <h2 className="text-lg font-semibold text-white">Controls</h2>
-          <div className="flex py-2 w-1/2 gap-2">
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => setRunning(!running)}
-              disabled={isGridEmpty(grid)}
-              title={running ? (isPaused ? "Resume" : "Pause") : "Play"}
-            >
-              {running && !isPaused ? <PauseIcon /> : <PlayIcon />}
-            </Button>
-
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={resetGrid}
-              title="Reset Grid"
-            >
-              <RefreshIcon />
-            </Button>
-
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={clearGrid}
-              title="Clear Grid"
-            >
-              <DeleteIcon />
-            </Button>
-          </div>
-        </div>
+        <GameOfLifeControls
+          grid={grid}
+          running={running}
+          isPaused={isPaused}
+          isGridEmpty={isGridEmpty}
+          setRunning={setRunning}
+          resetGrid={resetGrid}
+          clearGrid={clearGrid}
+        />
       </div>
     </div>
   );
