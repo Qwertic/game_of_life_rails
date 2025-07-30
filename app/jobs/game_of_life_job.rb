@@ -29,16 +29,24 @@ class GameOfLifeJob < ApplicationJob
 
   JOB_TIL = 5.minutes
 
+  # rubocop:disable Metrics/MethodLength, Metrics/AbcSize, Metrics/PerceivedComplexity, Metrics/CyclomaticComplexity
   def perform(grid:, job_id:, user_id:)
-    return if grid.nil?
+    return if grid.blank? || !grid.is_a?(Array) || user_id.blank? || job_id.blank?
 
     channel_name = "game_of_life_channel_user_#{user_id}"
     Rails.logger.info "Starting GameOfLifeJob for user: #{user_id}"
 
-    game = GameOfLife.new(grid)
-    start_time = Time.now
-
     begin
+      ActionCable.server.broadcast(channel_name, {
+                                     type: 'job_status',
+                                     status: 'running',
+                                     job_id:,
+                                     message: 'Simulation started'
+                                   })
+
+      game = GameOfLife.new(grid)
+      start_time = Time.now
+
       loop do
         new_grid = game.next_generation
         Rails.logger.info 'Broadcasting new grid state'
@@ -59,13 +67,20 @@ class GameOfLifeJob < ApplicationJob
 
         break if cancelled?(job_id) || Time.now - start_time > JOB_TIL
       end
+    rescue StandardError => e
+      ActionCable.server.broadcast(channel_name, {
+                                     type: 'job_status',
+                                     status: 'error',
+                                     job_id:,
+                                     message: e.message
+                                   })
+      raise
     ensure
       # Clean up Redis key when job finishes or fails
-      Sidekiq.redis do |r|
-        r.del("game_of_life_job_user_#{user_id}")
-      end
+      Sidekiq.redis { |r| r.del("game_of_life_job_user_#{user_id}") }
     end
   end
+  # rubocop:enable Metrics/MethodLength, Metrics/AbcSize, Metrics/PerceivedComplexity, Metrics/CyclomaticComplexity
 
   def self.cancel!(job_id)
     Sidekiq.redis { |c| c.set("cancelled-#{job_id}", 1, ex: 86_400) }

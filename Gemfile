@@ -70,3 +70,7 @@ gem 'sidekiq'
 gem 'tailwindcss-rails', '~> 3.0'
 
 gem 'devise'
+
+gem "rspec-rails", "~> 7.1"
+
+gem "factory_bot_rails", "~> 6.5", :groups => [:development, :test]

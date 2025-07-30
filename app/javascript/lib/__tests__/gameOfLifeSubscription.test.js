@@ -49,7 +49,10 @@ describe("createGameOfLifeSubscription", () => {
     const onJobStatus = jest.fn();
     createGameOfLifeSubscription({ onJobStatus });
     mockCable._callbacks.received({ type: "job_status", status: "running" });
-    expect(onJobStatus).toHaveBeenCalledWith({ type: "job_status", status: "running" });
+    expect(onJobStatus).toHaveBeenCalledWith({
+      type: "job_status",
+      status: "running",
+    });
   });
 
   it("does not call handlers for unknown data", () => {
