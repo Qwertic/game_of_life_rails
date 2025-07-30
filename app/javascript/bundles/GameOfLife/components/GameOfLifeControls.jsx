@@ -6,13 +6,12 @@ import { RefreshIcon } from "../icons/Refresh";
 import { DeleteIcon } from "../icons/Trash";
 
 const GameOfLifeControls = ({
-  grid,
   running,
   isPaused,
-  isGridEmpty,
-  setRunning,
+  disabled,
   resetGrid,
   clearGrid,
+  onPlayPause,
 }) => (
   <div className="p-4 rounded-b-xl">
     <h2 className="text-lg font-semibold text-white">Simulation Controller</h2>
@@ -20,8 +19,8 @@ const GameOfLifeControls = ({
       <Button
         size="icon"
         variant="ghost"
-        onClick={() => setRunning(!running)}
-        disabled={isGridEmpty(grid)}
+        onClick={onPlayPause}
+        disabled={disabled}
         title={running ? (isPaused ? "Resume" : "Pause") : "Play"}
       >
         {running && !isPaused ? <PauseIcon /> : <PlayIcon />}

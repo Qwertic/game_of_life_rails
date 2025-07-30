@@ -135,19 +135,13 @@ const GameOfLife = () => {
     };
   }, [canvasRef, cols, rows, cellSize]);
 
-  // Modified effect to handle play/pause/resume
-  useEffect(() => {
-    if (running && !hasActiveJob.current) {
-      toast("Starting new game simulation");
-      startSimulation(grid);
-      setIsPaused(false);
-    } else if (!running && hasActiveJob.current) {
-      toast("Stopping game simulation");
+  const handlePlayPause = useCallback(() => {
+    if (hasActiveJob.current) {
       cancelJob();
-      hasActiveJob.current = false;
-      setIsPaused(true);
+    } else {
+      startSimulation(grid);
     }
-  }, [running, grid, startSimulation, cancelJob]);
+  }, [hasActiveJob, cancelJob, startSimulation, grid]);
 
   // Render the grid on the canvas
   const drawGridCallback = useCallback(
@@ -195,7 +189,7 @@ const GameOfLife = () => {
           ref={canvasRef}
           width={cols * cellSize}
           height={rows * cellSize}
-          className="border border-border rounded-xl cursor-pointer transition-colors shadow-xs shadow-gray-500"
+          className="border border-border rounded-none cursor-pointer transition-colors shadow-xs shadow-gray-500"
           onClick={handleCanvasClick}
         />
       </div>
@@ -203,13 +197,12 @@ const GameOfLife = () => {
         <Sidebar />
         <Separator className="bg-gray-600" />
         <GameOfLifeControls
-          grid={grid}
           running={running}
           isPaused={isPaused}
-          isGridEmpty={isGridEmpty}
-          setRunning={setRunning}
           resetGrid={resetGrid}
           clearGrid={clearGrid}
+          onPlayPause={handlePlayPause}
+          disabled={isGridEmpty(grid)}
         />
       </div>
     </div>
