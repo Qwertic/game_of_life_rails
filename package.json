@@ -14,8 +14,6 @@
   "dependencies": {
     "@babel/core": "^7.26.0",
     "@babel/plugin-transform-runtime": "^7.25.9",
-    "@babel/preset-env": "^7.26.0",
-    "@babel/preset-react": "^7.25.9",
     "@babel/runtime": "^7.26.0",
     "@radix-ui/react-label": "^2.1.0",
     "@radix-ui/react-separator": "^1.1.0",
@@ -50,8 +48,16 @@
     "webpack-merge": "^5.10.0"
   },
   "devDependencies": {
+    "@babel/preset-env": "^7.28.0",
+    "@babel/preset-react": "^7.27.1",
     "@pmmmwh/react-refresh-webpack-plugin": "^0.5.15",
+    "babel-jest": "^30.0.5",
+    "jest": "^30.0.5",
+    "jest-environment-jsdom": "^30.0.5",
     "react-refresh": "^0.14.2",
     "webpack-dev-server": "^4.15.2"
+  },
+  "scripts": {
+    "test": "jest"
   }
 }
