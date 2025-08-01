@@ -1,9 +1,6 @@
 # A Game of Life in Ruby on Rails
 
-
 https://github.com/user-attachments/assets/900e4d09-5706-41cd-b064-9720d583f451
-
-
 
 This is an implementation of the Game of Life in Ruby on Rails. The simulation is displayed in a grid of cells, each of which is either alive or dead.
 
@@ -85,3 +82,15 @@ After loging in with the credentials of the seed data, you will be redirected to
 You can start the simulation by clicking the `Start` button. The simulation will run until you click the `Stop` button.
 
 You can clear the grid by clicking the `Clear` button. You can restart by reseting the grid and clicking the `Start` button.
+
+## Technologies Used
+
+- Ruby on Rails
+- React
+- ActionCable
+- Sidekiq
+- Redis
+- PostgreSQL
+- Devise for authentication
+- Shakapacker for asset management
+- Tailwind CSS for styling
